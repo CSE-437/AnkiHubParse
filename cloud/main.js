@@ -8,6 +8,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   if(DeckUtil.ValidateDeck(deck)){
     //Parse all the cards.
     deck.set("gid", DeckUtil.NewDeckId(deck.get("owner"), deck.get("did")))
+    console.log("success")
     res.success()
 
   }else{

@@ -6,6 +6,7 @@ module.exports.ValidateNewDeck = function(deck){//deck from json
 }
 
 module.exports.ValidateDeck = function(deck){
+  console.log(deck.get("owner"));
   return (deck.get('owner') && deck.get('did') && deck.get('name'))
 }
 
