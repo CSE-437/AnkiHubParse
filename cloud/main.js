@@ -99,5 +99,12 @@ Parse.Cloud.beforeSave("Card", function(req, res){
   }
 });
 
+//TODO : Implement transaction parsing 
+Parse.Cloud.beforeSave("Transaction", function(req, res){
+  //First validate Deck
+  res.success()
+
+});
+
 
 //Add functions for SAQL
