@@ -5,10 +5,28 @@ var CardUtil = require("./card.js");
 Parse.Cloud.beforeSave("Deck", function(req, res){
   //First validate Deck
   var deck = req.object
-  if(DeckUtil.ValidateDeck(deck)){
-    //Parse all the cards.
-    deck.set("gid", DeckUtil.NewDeckId(deck.get("owner"), deck.get("did")))
-    console.log("success")
+  var user = req.user
+  if(!user){
+    res.error({msg: "Decks Must have a user"})
+  }
+  else if(DeckUtil.ValidateDeck(deck)){
+    //check if card exst.
+    var query = new Parse.Query("Deck");
+    query.equalTo('gid', deck.get("gid"))
+    query.find({
+      success:function(results){
+        var realDeck = results[0] || deck;
+        //Set the owner of the deck
+        realDeck.set("owner", realDeck.get("owner") || user.get("username"));
+        if(DeckUtil.UserHasAccess(deck, user)){
+          res.success();
+        }else{
+          res.error({msg:"User doesn't have access to this deck"});
+        }
+      }, error: function(result, error){
+        res.error(error)
+      }
+    })
     res.success()
 
   }else{
@@ -20,6 +38,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 Parse.Cloud.afterSave("Deck", function(req){
   var deck = req.object;
   var cards = req.object.get("newCards")
+  //make it empty so that this doesn't loop
   deck.set("newCards", []);
   if(cards.length > 0){
 
@@ -31,46 +50,36 @@ Parse.Cloud.afterSave("Deck", function(req){
           //Check if the card is a card id or a full card.
           if(card.is){
             var query = new Parse.Query("Card");
-            query.equalTo("cid", card.is)
+            query.equalTo("gid", card.is)
             query.find( {
               success: function(results){
-                deck.add("cids", results[0].get("cid"));
-                deck.add("cards", results[0]);
-                deck.save(null, {
-                  success:function(savedCard){
-                    //TODO fillin
-                  }, error:function(savedCard, error){
-                    //TODO fillin
-                  }
-                });
-              }, error:function(){
-                console.error( "No card with id: " + card["is"]);
+                var newCard = results[0];
+                if(newCard){
+
+                  deck.add("cids", newCard.get("gid"));
+                  deck.add("cards", newCard);
+                  deck.save(null, {});
+                }
               }
             });
           }else{//If it is a new card create it.
             var newCard = new CardObject();
             newCard.set("cid", card["cid"]);
             newCard.set("did", deck.get("did"));
-            newCard.set("gid", newCardId(req.object.get("gid"), card["cid"]))
+            newCard.set("gid", newCardId(deck.get('gid'), card["cid"]))
             newCard.set("front", card["front"]);
             newCard.set("back", card["back"]);
             newCard.set("tags", card["tags"]);
-            newCard.set("notes", card["owner"]);
+            newCard.set("notes", card["notes"]);
             newCard.set("keywords", card["keywords"]);
-            newCard.set("owner", req.object.get("owner"));
+            newCard.set("owner", deck.get("owner"));
             newCard.save(null, {
               success:function(savedCard){
-                deck.add("cids", savedCard.get("cid"));
+                deck.add("cids", savedCard.get("gid"));
                 deck.add("cards", savedCard);
-                deck.save(null, {
-                  success:function(savedCard){
-                    //TODO fillin
-                  }, error:function(savedCard, error){
-                    //TODO fillin
-                  }
-                });
+                deck.save(null, {});
               }, error: function(savedCard, error){
-                console.error("Could not save card: "+card["cid"]);
+                console.error("Could not save card: "+card.get('gid'));
               }
             })
           }
@@ -99,7 +108,7 @@ Parse.Cloud.beforeSave("Card", function(req, res){
   }
 });
 
-//TODO : Implement transaction parsing 
+//TODO : Implement transaction parsing
 Parse.Cloud.beforeSave("Transaction", function(req, res){
   //First validate Deck
   res.success()

@@ -2,14 +2,21 @@ var Deck = Parse.Object.extend("Deck",{},{});
 
 module.exports.DeckObject = Deck;
 module.exports.ValidateNewDeck = function(deck){//deck from json
-  return (deck.owner && deck.did && deck.name);
+  return (deck.gid && deck.did && deck.name);
 }
 
 module.exports.ValidateDeck = function(deck){
-  console.log(deck.get("owner"));
-  return (deck.get('owner') && deck.get('did') && deck.get('name'))
+  return (deck.get('gid') && deck.get('did') && deck.get('name'))
 }
 
 module.exports.NewDeckId = function(owner, did){
   return owner+":"+did;
+}
+
+module.exports.DeckExist = function(deck){
+
+}
+
+module.exports.UserHasAccess = function(deck, user){
+  return (deck.get("owner") == user.username) || (deck.get("collaborators").indexOf(user.username) > -1)
 }

@@ -10,6 +10,6 @@ module.exports.ValidateCard = function(card){
   return (card.get('owner') && card.get('did')  && card.get('cid'))
 }
 
-module.exports.NewCardId = function(did, cid){
-  return did+":"+cid;
+module.exports.NewCardId = function(gid, cid){
+  return gid+":"+cid;
 }
