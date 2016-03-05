@@ -3,7 +3,7 @@ var Card = Parse.Object.extend("Card",{},{});
 module.exports.CardObject = Card;
 //Validates and Object
 module.exports.ValidateNewCard = function(card){//deck from json
-  return (card.owner && card.did && card.cid);
+  return (card.owner && card.gid && card.did && card.cid);
 }
 //Validates a Parse Object that is a Card
 module.exports.ValidateCard = function(card){
@@ -11,5 +11,6 @@ module.exports.ValidateCard = function(card){
 }
 
 module.exports.NewCardId = function(gid, cid){
+  console.log(gid+":"+cid);
   return gid+":"+cid;
 }

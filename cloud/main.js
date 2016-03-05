@@ -2,14 +2,15 @@ var DeckUtil = require("./deck.js");
 var CardUtil = require("./card.js");
 
 //Set did
+//TODO check if saving in after Save propagates the user
 Parse.Cloud.beforeSave("Deck", function(req, res){
   //First validate Deck
   var deck = req.object
   var user = req.user
-  if(!user){
-    res.error({msg: "Decks Must have a user"})
+  if(!user && DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
+    res.success();
   }
-  else if(DeckUtil.ValidateDeck(deck)){
+  else if(user && DeckUtil.ValidateDeck(deck)){
     //check if card exst.
     var query = new Parse.Query("Deck");
     query.equalTo('gid', deck.get("gid"))
@@ -17,8 +18,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
       success:function(results){
         var realDeck = results[0] || deck;
         //Set the owner of the deck
-        realDeck.set("owner", realDeck.get("owner") || user.get("username"));
-        if(DeckUtil.UserHasAccess(deck, user)){
+        req.object.set("owner", (realDeck.get("owner"))? user.get("owner") : user.get("username"));
+        if(DeckUtil.UserHasAccess(req.object, user)){
+          //console.log(req.object.get("owner"), realDeck.get("owner"), deck.get("owner"));
           res.success();
         }else{
           res.error({msg:"User doesn't have access to this deck"});
@@ -30,7 +32,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
     res.success()
 
   }else{
-    res.error({msg: "Invalid Deck"});
+    res.error({msg: "Invalid Deck. Did you send a user?"});
   }
 });
 
@@ -38,10 +40,11 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 Parse.Cloud.afterSave("Deck", function(req){
   var deck = req.object;
   var cards = req.object.get("newCards")
+
   //make it empty so that this doesn't loop
   deck.set("newCards", []);
   if(cards.length > 0){
-
+  console.log("Made it here", cards);
 
   deck.save(null,{
     success:function(){
@@ -57,29 +60,37 @@ Parse.Cloud.afterSave("Deck", function(req){
                 if(newCard){
 
                   deck.add("cids", newCard.get("gid"));
-                  deck.add("cards", newCard);
                   deck.save(null, {});
                 }
               }
             });
           }else{//If it is a new card create it.
-            var newCard = new CardObject();
-            newCard.set("cid", card["cid"]);
+            var newCard = new Parse.Object("Card");
+            newCard.set("cid", card.cid);
+            //console.log("made it here 1");
             newCard.set("did", deck.get("did"));
-            newCard.set("gid", newCardId(deck.get('gid'), card["cid"]))
-            newCard.set("front", card["front"]);
-            newCard.set("back", card["back"]);
-            newCard.set("tags", card["tags"]);
-            newCard.set("notes", card["notes"]);
-            newCard.set("keywords", card["keywords"]);
+            //console.log("made it here 2", card.cid, deck.get('gid'));
+            newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
+            //console.log("made it here 3");
+            newCard.set("front", card.front);
+            //console.log("made it here 4");
+            newCard.set("back", card.back);
+            //console.log("made it here 5");
+            newCard.set("tags", card.tags);
+            //console.log("made it here 6");
+            newCard.set("notes", card.notes);
+            //console.log("made it here 7");
+            newCard.set("keywords", card.keywords);
+            //console.log("made it here 8");
             newCard.set("owner", deck.get("owner"));
+            //console.log("made it here 9", newCard);
             newCard.save(null, {
               success:function(savedCard){
                 deck.add("cids", savedCard.get("gid"));
-                deck.add("cards", savedCard);
+                //console.log("Created new card: ", savedCard.get("gid"));
                 deck.save(null, {});
               }, error: function(savedCard, error){
-                console.error("Could not save card: "+card.get('gid'));
+                //console.error("Could not save card: "+card.get('gid'));
               }
             })
           }
@@ -98,11 +109,8 @@ Parse.Cloud.afterSave("Deck", function(req){
 Parse.Cloud.beforeSave("Card", function(req, res){
   //First validate Deck
   var card = req.object
-  if(CardUtil.ValidateCard(deck)){
-    //Parse all the cards.
-    deck.set("gid", CardUtil.NewCardId(card.get("did"), card.get("cid")))
+  if(CardUtil.ValidateCard(card)){
     res.success()
-
   }else{
     res.error({msg: "Invalid Card"});
   }

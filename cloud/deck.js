@@ -18,5 +18,5 @@ module.exports.DeckExist = function(deck){
 }
 
 module.exports.UserHasAccess = function(deck, user){
-  return (deck.get("owner") == user.username) || (deck.get("collaborators").indexOf(user.username) > -1)
+  return (deck.get("owner") == user.get("username")) || (deck.get("collaborators").indexOf(user.get("username")) > -1)
 }
