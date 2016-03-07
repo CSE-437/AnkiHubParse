@@ -44,11 +44,13 @@ Parse.Cloud.afterSave("Deck", function(req){
   //make it empty so that this doesn't loop
   deck.set("newCards", []);
   if(cards.length > 0){
-  console.log("Made it here", cards);
+  //console.log("Made it here", cards);
 
   deck.save(null,{
     success:function(){
       if(cards){
+        var oldCards = []
+        var newCards = []
         cards.forEach(function(card, index, arr){
           //Check if the card is a card id or a full card.
           if(card.is){
@@ -59,8 +61,9 @@ Parse.Cloud.afterSave("Deck", function(req){
                 var newCard = results[0];
                 if(newCard){
 
-                  deck.add("cids", newCard.get("gid"));
-                  deck.save(null, {});
+                  //deck.add("cids", newCard.get("gid"));
+                  oldCards.push(newCard)
+                  //deck.save(null, {});
                 }
               }
             });
@@ -83,18 +86,34 @@ Parse.Cloud.afterSave("Deck", function(req){
             newCard.set("keywords", card.keywords);
             //console.log("made it here 8");
             newCard.set("owner", deck.get("owner"));
-            //console.log("made it here 9", newCard);
-            newCard.save(null, {
-              success:function(savedCard){
-                deck.add("cids", savedCard.get("gid"));
-                //console.log("Created new card: ", savedCard.get("gid"));
-                deck.save(null, {});
-              }, error: function(savedCard, error){
-                //console.error("Could not save card: "+card.get('gid'));
-              }
-            })
+            console.log("made it here 9", newCard);
+            newCards.push(newCard);
+
           }
         });
+        Parse.Object.saveAll(newCards, {
+          success: function(objs){
+            console.log("hello")
+            var cids = objs.map(function(c){
+              return c.get("gid");
+            }).concat(oldCards.map(function(c){
+              return c.get("gid");
+            }));
+            console.log("Cids: ", cids);
+            cids.forEach(function(id){
+              deck.addUnique("cids",id);
+            });
+            deck.save({
+              success: function(deck){
+                console.log("Deck has been saved");
+              }, error: function(err){
+                console.error("Cant save Deck");
+              }
+            });
+          },error: function(error){
+            console.error("error",error)
+          }
+        })
       }
     },
     error:function(){
