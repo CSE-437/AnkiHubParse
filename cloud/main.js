@@ -1,5 +1,6 @@
 var DeckUtil = require("./deck.js");
 var CardUtil = require("./card.js");
+var TUtil = require("./transaction.js")
 
 //Set did
 //TODO check if saving in after Save propagates the user
@@ -7,33 +8,13 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   //First validate Deck
   var deck = req.object
   var user = req.user
-  if(!user && DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
-    res.success();
+  if(!user){
+    return res.error({error: "Invalid Deck. Did you send a user?", user:user});
   }
-  else if(user && DeckUtil.ValidateDeck(deck)){
-    //check if card exst.
-    var query = new Parse.Query("Deck");
-    query.equalTo('gid', deck.get("gid"))
-    query.find({
-      success:function(results){
-        var realDeck = results[0] || deck;
-        //Set the owner of the deck
-        req.object.set("owner", (realDeck.get("owner"))? user.get("owner") : user.get("username"));
-        if(DeckUtil.UserHasAccess(req.object, user)){
-          //console.log(req.object.get("owner"), realDeck.get("owner"), deck.get("owner"));
-          res.success();
-        }else{
-          res.error({msg:"User doesn't have access to this deck"});
-        }
-      }, error: function(result, error){
-        res.error(error)
-      }
-    })
-    res.success()
-
-  }else{
-    res.error({msg: "Invalid Deck. Did you send a user?"});
+  if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
+    return res.success();
   }
+  return res.error({error:"Invalid Deck"})
 });
 
 //Parse cards
@@ -42,7 +23,7 @@ Parse.Cloud.afterSave("Deck", function(req){
   var cards = req.object.get("newCards")
 
   //make it empty so that this doesn't loop
-  deck.set("newCards", []);
+  deck.unset("newCards");
   if(cards.length > 0){
   //console.log("Made it here", cards);
 
@@ -131,16 +112,147 @@ Parse.Cloud.beforeSave("Card", function(req, res){
   if(CardUtil.ValidateCard(card)){
     res.success()
   }else{
-    res.error({msg: "Invalid Card"});
+    res.error({error: "Invalid Card"});
   }
 });
 
-//TODO : Implement transaction parsing
+
+
+function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
+  if(t.get("query") === "FORK"){
+    //Make sure deck is public
+    if(!(TUtil.UserHasAccess(t, user))){
+      return errorCB({error: "User does not have access"}, t);
+    }
+    var query = new Parse.Query("Deck")
+    query.equalTo('gid', t.get("on"))
+    query.find({
+      success:function(results){
+        var original = results[0];
+        if(original){
+          var forked = new Parse.Object("Deck");
+          forked.set("name", original.get("name"));
+          forked.set("keywords", original.get("keywords"));
+          forked.set("desc", original.get("desc"));
+          forked.set("isPublic", original.get("isPublic"));
+          forked.set("children", original.get("children"));
+          forked.set("owner", user.get("username"));
+          forked.set("gid", (DeckUtil.NewDeckId(user.get("username"), original.get("did"))));
+          forked.set("did", original.get("did"));
+          forked.set("cids", original.get("cids"));
+          forked.save(null, {
+            success:successCB,
+            error:errorCB
+          });
+        }else{
+          errorCB({error: "Failed to Find Deck with given deckid", transaction: t})
+        }
+      }, error: errorCB
+    })
+
+  }else{
+    //GET The Deck.
+    if(!(TUtil.UserHasAccess(t, user))){
+      return errorCB({error: "User does not have access"}, t);
+    }
+    var query = new Parse.Query("Deck")
+    query.equalTo('gid', t.get("on"))
+    query.find({
+      success: function(results){
+        var deck = results[0];
+        if(deck){
+
+          switch(t.get("query")){
+            case "REDESC":
+            deck.set("description", t.get("data").description);
+            break;
+
+            case "RENAME":
+            deck.set("name", t.get("data").name);
+            break;
+
+            case "REMOVE":
+            deck.remove("cids", t.get("data").gid);
+            break;
+
+            case "ADD":
+            deck.set("newCards", [t.data]);
+            break;
+
+            case "DELETE":
+            if(deck.get("owner") === user.get("username")){
+
+              return deck.destroy({
+                success: successCB,
+                error: errorCB
+              });
+            }
+            break;
+
+            case "aKEYWORDS":
+              t.get("data").keywords.forEach(function(word){
+                deck.addUnique("keywords", word)
+              });
+            break;
+
+            case "rKEYWORDS":
+            t.get("data").keywords.forEach(function(word){
+              deck.remove("keywords", word)
+            });
+            break;
+
+            case "cKEYWORDS":
+            t.get("data").keywords.forEach(function(word){
+              deck.unset("keywords")
+            });
+            break;
+
+            case "REPUB":
+            deck.set("isPublic", t.get("isPublic"))
+
+          }
+
+          deck.save(null, {
+            success:function(deck){
+              successCB()
+            },
+            error:function(error){
+              errorCB(error);
+            },
+            sessionToken: user.get("sessionToken")
+          })
+        }else{
+            errorCB({error: "Failed to Find Deck with given deckid", transaction: t})
+        }
+      },
+      error: errorCB
+    });
+  }
+
+}
+
 Parse.Cloud.beforeSave("Transaction", function(req, res){
   //First validate Deck
-  res.success()
+  console.log("here0", req.object)
+  var didParse = TUtil.ParseTransaction(req.object)
+  console.log("here1")
+  if (didParse.error){
+    return res.error(didParse)
+  }
+  var t = didParse.transaction
+  console.log("here2");
+  //Ensure req.object is the same
+  req.object = t;
+  var user = req.user
+  if(!user){
+    res.error({error:"Need to be logged in to post transaction"});
+  }
+  switch(t.get("for")){
+    case "Deck":
+      ApplyTransactionToDeck(t, user, res.error, res.success, res)
+    break;
+    default:
+      res.error({error:"Invalid Transaction check for field \"for\"", transaction: t});
+  }
 
 });
-
-
-//Add functions for SAQL

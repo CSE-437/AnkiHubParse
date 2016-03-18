@@ -2,11 +2,11 @@ var Deck = Parse.Object.extend("Deck",{},{});
 
 module.exports.DeckObject = Deck;
 module.exports.ValidateNewDeck = function(deck){//deck from json
-  return (deck.gid && deck.did && deck.name);
+  return (deck.gid && deck.did && deck.name && deck.owner);
 }
 
 module.exports.ValidateDeck = function(deck){
-  return (deck.get('gid') && deck.get('did') && deck.get('name'))
+  return (deck.get('gid') && deck.get('did') && deck.get('name') && deck.get("owner"))
 }
 
 module.exports.NewDeckId = function(owner, did){
