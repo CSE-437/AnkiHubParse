@@ -27,9 +27,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
             newCard.set("owner", user.get('username'));
             newCard.set("cid", card.cid);
-            //// console.log("made it here 1");
+            //console.log("made it here 1");
             newCard.set("did", deck.get("did"));
-            //// console.log("made it here 2", card.cid, deck.get('gid'));
+            //console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
 
             newCards.push(newCard);
@@ -75,16 +75,16 @@ Parse.Cloud.beforeSave("Card", function(req, res){
 });
 
 function ApplyTransactionToUser(t, user, errorCB, successCB){
-  // console.log("here a", user);
+  console.log("here a", user);
   switch(t.get('query')){
     case 'aDECK':
-      // console.log('here 2.5',t.get('data'), t.get('data').gid);
-      // console.log('here 2.6', user);
+      console.log('here 2.5',t.get('data'), t.get('data').gid);
+      console.log('here 2.6', user);
       if(!user.get('decks')){
         user.set('decks', []);
       }
       user.addUnique('decks', t.get('data').gid);
-      // console.log('here 3');
+      console.log('here 3');
     break;
 
     case 'rDECK':
@@ -110,10 +110,10 @@ function ApplyTransactionToUser(t, user, errorCB, successCB){
     break;
 
   }
-  // console.log('here 5')
+  console.log('here 5')
   user.save(null,{
-    success: function(){ // console.log("here4"); successCB()},
-    error: function(user, error){ // console.log('here6', arguments); errorCB(error)},
+    success: function(){ console.log("here4"); successCB()},
+    error: function(user, error){ console.log('here6', arguments); errorCB(error)},
     sessionToken: user.get('sessionToken')
   });
 }
@@ -240,26 +240,26 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
 Parse.Cloud.beforeSave("Transaction", function(req, res){
   //First validate Deck
-  // console.log('here1');
+  console.log('here1');
   var didParse = TUtil.ParseTransaction(req.object)
   if (didParse.error){
     return res.error(didParse.error)
   }
-  // console.log('here1')
+  console.log('here1')
   var t = didParse.transaction
   //Ensure req.object is the same
   req.object = t;
   var user = req.user;
-  // console.log('here 1.5', user);
+  console.log('here 1.5', user);
   if(!user){
     return res.error({error:"Need to be logged in to post transaction"});
   }else{
-    // console.log('here b', user);
+    console.log('here b', user);
   }
   switch(t.get("for")){
     case "User":
 
-      // console.log('here2')
+      console.log('here2')
       ApplyTransactionToUser(t, user, res.error, res.success);
     break;
     case "Deck":
