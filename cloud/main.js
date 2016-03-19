@@ -27,9 +27,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
             newCard.set("owner", user.get('username'));
             newCard.set("cid", card.cid);
-            //console.log("made it here 1");
+            //// console.log("made it here 1");
             newCard.set("did", deck.get("did"));
-            //console.log("made it here 2", card.cid, deck.get('gid'));
+            //// console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
 
             newCards.push(newCard);
@@ -46,11 +46,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             cids.forEach(function(id){
               deck.addUnique("cids",id);
             });
-            console.log("success")
             res.success();
 
           },error: function(error){
-            console.error("error",error);
             res.error({error:"Invalid Deck"});
           }
         });
@@ -77,56 +75,47 @@ Parse.Cloud.beforeSave("Card", function(req, res){
 });
 
 function ApplyTransactionToUser(t, user, errorCB, successCB){
+  // console.log("here a", user);
   switch(t.get('query')){
     case 'aDECK':
+      // console.log('here 2.5',t.get('data'), t.get('data').gid);
+      // console.log('here 2.6', user);
+      if(!user.get('decks')){
+        user.set('decks', []);
+      }
       user.addUnique('decks', t.get('data').gid);
+      // console.log('here 3');
     break;
 
     case 'rDECK':
+      if(!user.get('decks')){
+        user.set('decks', []);
+      }
       user.remove('decks', t.get('data').gid);
     break;
 
     case 'aSUBSCRIPTION':
-      var query = new Parse.Query("Deck");
-      query.equalTo('gid', t.get('data').gid);
-      query.find({
-        success:function(results){
-          if(results[0]){
-            var deck = results[0];
-            deck.addUnique('subscribers', user);
-            deck.save(null,{
-              success:function(d){
-                user.addUnique('subscriptions', d);
-              }
-            });
-          }
-        }
-      });
+    if(!user.get('subscriptions')){
+      user.set('subscriptions', []);
+    }
+      user.addUnique('subscriptions', d);
     break;
 
     case 'rSUBSCRIPTION':
-    var query = new Parse.Query("Deck");
-    query.equalTo('gid', t.get('data').gid);
-    query.find({
-      success:function(results){
-        if(results[0]){
-          var deck = results[0];
-          deck.remove('subscribers', user);
-          deck.save(null,{
-            success:function(d){
-              user.remove('subscriptions', d);
-            }
-          });
-        }
-      }
-    });
+    if(!user.get('subscriptions')){
+      user.set('subscriptions', []);
+    }
+    user.remove('subscriptions', d);
+
     break;
 
-    user.save(null,{
-      success: successCB,
-      error: errorCB,
-    });
   }
+  // console.log('here 5')
+  user.save(null,{
+    success: function(){ // console.log("here4"); successCB()},
+    error: function(user, error){ // console.log('here6', arguments); errorCB(error)},
+    sessionToken: user.get('sessionToken')
+  });
 }
 
 function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
@@ -153,12 +142,13 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
           forked.set("cids", original.get("cids"));
           forked.save(null, {
             success:successCB,
-            error:errorCB
+            error:function(user, err){errorCB(err)},
+            sessionToken: user.get('sessionToken')
           });
         }else{
           errorCB({error: "Failed to Find Deck with given deckid", transaction: t})
         }
-      }, error: errorCB
+      }, error: function(user, err){errorCB(err)}
     })
 
   }else{
@@ -195,7 +185,7 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
               return deck.destroy({
                 success: successCB,
-                error: errorCB
+                error: function(user, err){errorCB(err)}
               });
             }
             break;
@@ -235,16 +225,14 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
             success:function(deck){
               successCB()
             },
-            error:function(error){
-              errorCB(error);
-            },
+            error:function(user, err){errorCB(err)},
             sessionToken: user.get("sessionToken")
           })
         }else{
             errorCB({error: "Failed to Find Deck with given deckid", transaction: t})
         }
       },
-      error: errorCB
+      error: function(user, err){errorCB(err)}
     });
   }
 
@@ -252,19 +240,26 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
 Parse.Cloud.beforeSave("Transaction", function(req, res){
   //First validate Deck
+  // console.log('here1');
   var didParse = TUtil.ParseTransaction(req.object)
   if (didParse.error){
-    return res.error(didParse)
+    return res.error(didParse.error)
   }
+  // console.log('here1')
   var t = didParse.transaction
   //Ensure req.object is the same
   req.object = t;
-  var user = req.user
+  var user = req.user;
+  // console.log('here 1.5', user);
   if(!user){
-    res.error({error:"Need to be logged in to post transaction"});
+    return res.error({error:"Need to be logged in to post transaction"});
+  }else{
+    // console.log('here b', user);
   }
   switch(t.get("for")){
     case "User":
+
+      // console.log('here2')
       ApplyTransactionToUser(t, user, res.error, res.success);
     break;
     case "Deck":
