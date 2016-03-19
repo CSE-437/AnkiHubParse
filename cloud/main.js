@@ -12,97 +12,57 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
     return res.error({error: "Invalid Deck. Did you send a user?", user:user});
   }
   if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
-    return res.success();
-  }
-  return res.error({error:"Invalid Deck"})
-});
-
-//Parse cards
-Parse.Cloud.afterSave("Deck", function(req){
-  var deck = req.object;
-  var cards = req.object.get("newCards")
-
-  //make it empty so that this doesn't loop
-  deck.unset("newCards");
-  if(cards.length > 0){
-  //console.log("Made it here", cards);
-
-  deck.save(null,{
-    success:function(){
+    var cards = req.object.get("newCards");
+    //make it empty so that this doesn't loop
+    deck.unset("newCards");
+    if(cards.length > 0){
+      var oldCards = [];
       if(cards){
-        var oldCards = []
-        var newCards = []
+        var newCards = [];
         cards.forEach(function(card, index, arr){
-          //Check if the card is a card id or a full card.
           if(card.is){
-            var query = new Parse.Query("Card");
-            query.equalTo("gid", card.is)
-            query.find( {
-              success: function(results){
-                var newCard = results[0];
-                if(newCard){
-
-                  //deck.add("cids", newCard.get("gid"));
-                  oldCards.push(newCard)
-                  //deck.save(null, {});
-                }
-              }
-            });
+            oldCards.push(card.is);
           }else{//If it is a new card create it.
             var newCard = new Parse.Object("Card");
+            Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
+            newCard.set("owner", user.get('username'));
             newCard.set("cid", card.cid);
             //console.log("made it here 1");
             newCard.set("did", deck.get("did"));
             //console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
-            //console.log("made it here 3");
-            newCard.set("front", card.front);
-            //console.log("made it here 4");
-            newCard.set("back", card.back);
-            //console.log("made it here 5");
-            newCard.set("tags", card.tags);
-            //console.log("made it here 6");
-            newCard.set("notes", card.notes);
-            //console.log("made it here 7");
-            newCard.set("keywords", card.keywords);
-            //console.log("made it here 8");
-            newCard.set("owner", deck.get("owner"));
-            console.log("made it here 9", newCard);
+
             newCards.push(newCard);
 
           }
         });
         Parse.Object.saveAll(newCards, {
           success: function(objs){
-            console.log("hello")
             var cids = objs.map(function(c){
               return c.get("gid");
-            }).concat(oldCards.map(function(c){
-              return c.get("gid");
+            }).concat(oldCards.map(function(id){
+              return id;
             }));
-            console.log("Cids: ", cids);
             cids.forEach(function(id){
               deck.addUnique("cids",id);
             });
-            deck.save({
-              success: function(deck){
-                console.log("Deck has been saved");
-              }, error: function(err){
-                console.error("Cant save Deck");
-              }
-            });
-          },error: function(error){
-            console.error("error",error)
-          }
-        })
-      }
-    },
-    error:function(){
-      console.error("Could not add new cards");
-    }
-  });
-}
+            console.log("success")
+            res.success();
 
+          },error: function(error){
+            console.error("error",error);
+            res.error({error:"Invalid Deck"});
+          }
+        });
+      }
+    }else{
+
+      return res.success();
+    }
+  }else{
+
+    return res.error({error:"Invalid Deck"});
+  }
 });
 
 //Set cardid
@@ -116,7 +76,58 @@ Parse.Cloud.beforeSave("Card", function(req, res){
   }
 });
 
+function ApplyTransactionToUser(t, user, errorCB, successCB){
+  switch(t.get('query')){
+    case 'aDECK':
+      user.addUnique('decks', t.get('data').gid);
+    break;
 
+    case 'rDECK':
+      user.remove('decks', t.get('data').gid);
+    break;
+
+    case 'aSUBSCRIPTION':
+      var query = new Parse.Query("Deck");
+      query.equalTo('gid', t.get('data').gid);
+      query.find({
+        success:function(results){
+          if(results[0]){
+            var deck = results[0];
+            deck.addUnique('subscribers', user);
+            deck.save(null,{
+              success:function(d){
+                user.addUnique('subscriptions', d);
+              }
+            });
+          }
+        }
+      });
+    break;
+
+    case 'rSUBSCRIPTION':
+    var query = new Parse.Query("Deck");
+    query.equalTo('gid', t.get('data').gid);
+    query.find({
+      success:function(results){
+        if(results[0]){
+          var deck = results[0];
+          deck.remove('subscribers', user);
+          deck.save(null,{
+            success:function(d){
+              user.remove('subscriptions', d);
+            }
+          });
+        }
+      }
+    });
+    break;
+
+    user.save(null,{
+      success: successCB,
+      error: errorCB,
+    });
+  }
+}
 
 function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
   if(t.get("query") === "FORK"){
@@ -209,7 +220,15 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
             case "REPUB":
             deck.set("isPublic", t.get("isPublic"))
+            break;
 
+            case "aCOLLABORATOR":
+            deck.addUnique('collaborators', user);
+            break;
+
+            case "rCOLLABORATOR":
+            deck.remove('collaborators', user);
+            break;
           }
 
           deck.save(null, {
@@ -233,14 +252,11 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
 Parse.Cloud.beforeSave("Transaction", function(req, res){
   //First validate Deck
-  console.log("here0", req.object)
   var didParse = TUtil.ParseTransaction(req.object)
-  console.log("here1")
   if (didParse.error){
     return res.error(didParse)
   }
   var t = didParse.transaction
-  console.log("here2");
   //Ensure req.object is the same
   req.object = t;
   var user = req.user
@@ -248,6 +264,9 @@ Parse.Cloud.beforeSave("Transaction", function(req, res){
     res.error({error:"Need to be logged in to post transaction"});
   }
   switch(t.get("for")){
+    case "User":
+      ApplyTransactionToUser(t, user, res.error, res.success);
+    break;
     case "Deck":
       ApplyTransactionToDeck(t, user, res.error, res.success, res)
     break;

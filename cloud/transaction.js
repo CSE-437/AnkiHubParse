@@ -1,6 +1,14 @@
 /*
 
 */
+
+var USER_QUERIES = [
+  "aSUBSCRIPTION",
+  "rSUBSCRIPTION",
+  "aDECK",
+  "rDECK",
+];
+
 var DECK_QUERIES = [
   "FORK",
   "ADD",
@@ -14,8 +22,9 @@ var DECK_QUERIES = [
   "cKEYWORDS",//TODO : fIGURE OUT WHAT THIS MEANS
   "REPUB",
   "aCOLLABORATOR",
-  "rCOLLABORATOR"
-]
+  "rCOLLABORATOR",
+  
+];
 
 var CARD_QUERIES = [
   "UPDATE",
@@ -31,18 +40,18 @@ var CARD_QUERIES = [
   "GETACTIONS",
   "aCOLLABORATOR",
   "rCOLLABORATOR"
-]
+];
 
 function ValidateQuery(queryString, obj){
   switch (obj.get("for")) {
     case "User":
-      return true
+      return USER_QUERIES.includes(queryString);
       break;
     case "Deck":
-      return DECK_QUERIES.includes(queryString)
+      return DECK_QUERIES.includes(queryString);
       break;
     case "Card":
-      return CARD_QUERIES.includes(queryString)
+      return CARD_QUERIES.includes(queryString);
       break;
     default:
       return false
@@ -66,10 +75,10 @@ module.exports.ParseTransaction = function(t){
         obj = "Card"
         break;
       default:
-        return {error: "Invalid On Field", transaction: t}
+        return {error: "Invalid On Field", transaction: t};
     }
 
-    t.set("for", obj)
+    t.set("for", obj);
 
     if (ValidateQuery(queryString, t)){
         return {error: null, transaction: t}

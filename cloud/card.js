@@ -11,6 +11,5 @@ module.exports.ValidateCard = function(card){
 }
 
 module.exports.NewCardId = function(gid, cid){
-  console.log(gid+":"+cid);
   return gid+":"+cid;
 }
