@@ -33,11 +33,12 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
 
             newCards.push(newCard);
-
+            console.log('here 2.5')
           }
         });
         Parse.Object.saveAll(newCards, {
           success: function(objs){
+            console.log('here 2.7')
             var cids = objs.map(function(c){
               return c.get("gid");
             }).concat(oldCards.map(function(id){
