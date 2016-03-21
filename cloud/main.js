@@ -31,8 +31,8 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
             newCard.save(null, {
-              success: res.success,
-              error: res.error,
+              success: function(){res.success();},
+              error: function(){res.error();},
               sessionToken: user.get('sessionToken')
             });
             newCards.push(newCard);
