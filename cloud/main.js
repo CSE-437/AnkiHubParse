@@ -27,9 +27,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
             newCard.set("owner", user.get('username'));
             newCard.set("cid", card.cid);
-            //console.log("made it here 1");
+            console.log("made it here 1");
             newCard.set("did", deck.get("did"));
-            //console.log("made it here 2", card.cid, deck.get('gid'));
+            console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
 
             newCards.push(newCard);
@@ -46,19 +46,21 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             cids.forEach(function(id){
               deck.addUnique("cids",id);
             });
+            console.log('here 3')
             res.success();
 
           },error: function(error){
+            console.log('here 4')
             res.error({error:"Invalid Deck"});
           }
         });
       }
     }else{
-
+      console.log('here 5')
       return res.success();
     }
   }else{
-
+    console.log('here 6')
     return res.error({error:"Invalid Deck"});
   }
 });
@@ -75,7 +77,7 @@ Parse.Cloud.beforeSave("Card", function(req, res){
 });
 
 function ApplyTransactionToUser(t, user, errorCB, successCB){
-  
+
   switch(t.get('query')){
     case 'aDECK':
 
