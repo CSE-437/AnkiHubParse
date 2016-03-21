@@ -55,7 +55,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             res.error({error:"Invalid Deck"});
           }
         });
-      conole.log("here after 2");
+      console.log("here after 2");
     }else{
       console.log('here 5')
       return res.success();
