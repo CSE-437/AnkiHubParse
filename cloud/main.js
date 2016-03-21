@@ -14,6 +14,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
     var cards = req.object.get("newCards");
     //make it empty so that this doesn't loop
+    if (!deck.get('gid')){
+      deck.set('gid', DeckUtil.NewDeckId(user.get('username'), deck.get('did')));
+    }
     deck.unset("newCards");
     if(cards.length > 0){
       var oldCards = [];
@@ -22,6 +25,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
           if(card.is){
             oldCards.push(card.is);
           }else{//If it is a new card create it.
+
             var newCard = new Parse.Object("Card");
             Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
             newCard.set("owner", user.get('username'));
@@ -37,7 +41,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             });
             newCards.push(newCard);
 
-            console.log('here 2.5')
+            console.log('here 2.5', newCard.toJSON());
           }
         });
         console.log('here 2.6', newCards);
