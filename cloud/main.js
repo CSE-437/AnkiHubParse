@@ -35,7 +35,8 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             console.log('here 2.5')
           }
         });
-        console.log('here 2.6');
+        console.log('here 2.6', newCards);
+        //Crashes here, why?
         Parse.Object.saveAll(newCards, {
           success: function(objs){
             console.log('here 2.7')
