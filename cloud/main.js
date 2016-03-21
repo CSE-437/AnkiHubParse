@@ -30,32 +30,38 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             newCard.set("did", deck.get("did"));
             console.log("made it here 2", card.cid, deck.get('gid'));
             newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
-
+            newCard.save(null, {
+              success: res.success,
+              error: res.error,
+              sessionToken: user.get('sessionToken')
+            });
             newCards.push(newCard);
+
             console.log('here 2.5')
           }
         });
         console.log('here 2.6', newCards);
         //Crashes here, why?
-        Parse.Object.saveAll(newCards, {
-          success: function(objs){
-            console.log('here 2.7')
-            var cids = objs.map(function(c){
-              return c.get("gid");
-            }).concat(oldCards.map(function(id){
-              return id;
-            }));
-            cids.forEach(function(id){
-              deck.addUnique("cids",id);
-            });
-            console.log('here 3')
-            res.success();
-
-          },error: function(error){
-            console.log('here 4')
-            res.error({error:"Invalid Deck"});
-          }
-        });
+        // Parse.Object.saveAll(newCards, {
+        //   success: function(objs){
+        //     console.log('here 2.7')
+        //     var cids = objs.map(function(c){
+        //       return c.get("gid");
+        //     }).concat(oldCards.map(function(id){
+        //       return id;
+        //     }));
+        //     cids.forEach(function(id){
+        //       deck.addUnique("cids",id);
+        //     });
+        //     console.log('here 3')
+        //     res.success();
+        //
+        //   },error: function(error){
+        //     console.log('here 4')
+        //     res.error({error:"Invalid Deck"});
+        //   },
+        //   sessionToken: user.get('sessionToken'),
+        // });
       console.log("here after 2");
     }else{
       console.log('here 5')
