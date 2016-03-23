@@ -8,14 +8,15 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   //First validate Deck
   var deck = req.object
   var user = req.user
-  if(!user){
-    return res.error({error: "Invalid Deck. Did you send a user?", user:user});
-  }
+//  if(!user){
+//    return res.error({error: "Invalid Deck. Did you send a user?", user:user});
+//  }
   if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
     var cards = req.object.get("newCards");
     //make it empty so that this doesn't loop
     if (!deck.get('gid')){
-      deck.set('gid', DeckUtil.NewDeckId(user.get('username'), deck.get('did')));
+//      deck.set('gid', DeckUtil.NewDeckId(user.get('username'), deck.get('did')));
+        deck.set('gid', DeckUtil.NewDeckId(deck.get('owner'), deck.get('did')));
     }
     deck.unset("newCards");
     if(cards.length > 0){
@@ -28,7 +29,8 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 
             var newCard = new Parse.Object("Card");
             Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
-            newCard.set("owner", user.get('username'));
+//            newCard.set("owner", user.get('username'));
+            newCard.set("owner", deck.get('owner'));
             newCard.set("cid", card.cid);
             console.log("made it here 1");
             newCard.set("did", deck.get("did"));
@@ -57,8 +59,8 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
           },error: function(error){
             console.log('here 4')
             res.error({error:"Invalid Deck"});
-          },
-          sessionToken: user.get('sessionToken'),
+          }
+//          sessionToken: user.get('sessionToken'),
         });
       console.log("here after 2");
     }else{
