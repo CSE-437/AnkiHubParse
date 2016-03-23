@@ -83,7 +83,7 @@ Parse.Cloud.beforeSave("Card", function(req, res){
 });
 
 function ApplyTransactionToUser(t, user, errorCB, successCB){
-
+  var delaySave = false;
   switch(t.get('query')){
     case 'aDECK':
 
@@ -105,24 +105,27 @@ function ApplyTransactionToUser(t, user, errorCB, successCB){
     if(!user.get('subscriptions')){
       user.set('subscriptions', []);
     }
-      user.addUnique('subscriptions', d);
+      user.addUnique('subscriptions', t.get('data').gid);
     break;
 
     case 'rSUBSCRIPTION':
     if(!user.get('subscriptions')){
       user.set('subscriptions', []);
     }
-    user.remove('subscriptions', d);
+    user.remove('subscriptions', t.get('data').gid);
 
     break;
 
   }
   //console.log('here 5')
-  user.save(null,{
-    success: function(){ successCB()},
-    error: function(user, error){ errorCB(error)},
-    sessionToken: user.get('sessionToken')
-  });
+  if(!delaySave){
+
+    user.save(null,{
+      success: function(){ successCB()},
+      error: function(user, error){ errorCB(error)},
+      sessionToken: user.get('sessionToken')
+    });
+  }
 }
 
 function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
@@ -184,7 +187,7 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
             break;
 
             case "ADD":
-            deck.set("newCards", [t.data]);
+            deck.set("newCards", [t.get("data")]);
             break;
 
             case "DELETE":
