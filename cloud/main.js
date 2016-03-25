@@ -8,9 +8,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   //First validate Deck
   var deck = req.object
   var user = req.user
-  if(!user){
-    return res.error({error: "Invalid Deck. Did you send a user?", user:user});
-  }
+//  if(!user){
+//    return res.error({error: "Invalid Deck. Did you send a user?", user:user});
+//  }
   if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
     console.log("Validated Deck Before Synching");
     var cards = req.object.get("newCards");
@@ -49,8 +49,8 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 
           },error: function(error){
             res.error({error:"Invalid Deck"});
-          },
-          sessionToken: user.get('sessionToken'),
+          }
+//          sessionToken: user.get('sessionToken'),
         });
 
     }else{
