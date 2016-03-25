@@ -48,6 +48,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             res.success();
 
           },error: function(error){
+            console.log("Invalid Deck, Bad Cards")
             res.error({error:"Invalid Deck, Bad Cards"});
           }, sessionToken: user.get('sessionToken')
 //          sessionToken: user.get('sessionToken'),
