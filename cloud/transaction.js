@@ -23,7 +23,8 @@ var DECK_QUERIES = [
   "REPUB",
   "aCOLLABORATOR",
   "rCOLLABORATOR",
-  
+  "aSUBSCRIBER",
+  "rSUBSCRIBER"
 ];
 
 var CARD_QUERIES = [
@@ -57,6 +58,9 @@ function ValidateQuery(queryString, obj){
       return false
   }
 }
+var Transaction = Parse.Object.extend("Transaction",{},{});
+
+module.exports.Transaction = Transaction;
 
 module.exports.ParseTransaction = function(t){
   console.log(t.toJSON())
@@ -92,4 +96,10 @@ module.exports.ParseTransaction = function(t){
 
 module.exports.UserHasAccess = function(obj, user){
   return (obj.get("owner") == user.get("username")) || (obj.get("collaborators").indexOf(user.get("username")) > -1)
+}
+
+module.exports.NewTransaction = function(t){
+  var tSub = new Parse.Object("Transaction");
+  Object.keys(t).forEach(function(key){tSub.set(key, t[key])});
+  return tSub
 }

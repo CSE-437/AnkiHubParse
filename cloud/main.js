@@ -12,13 +12,17 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
     return res.error({error: "Invalid Deck. Did you send a user?", user:user});
   }
   if(DeckUtil.ValidateDeck(deck)){//Save called by Cloud Code
+    console.log("Validated Deck Before Synching");
     var cards = req.object.get("newCards");
     //make it empty so that this doesn't loop
+    if (!deck.get('owner')){
+      deck.set('owner', user.get('username'));
+    }
     if (!deck.get('gid')){
-      deck.set('gid', DeckUtil.NewDeckId(user.get('username'), deck.get('did')));
+      deck.set('gid', [user.get('username'), deck.get('did')].join(':'));
     }
     deck.unset("newCards");
-    if(cards.length > 0){
+    if(cards && cards.length > 0){
       var oldCards = [];
         var newCards = [];
         cards.forEach(function(card, index, arr){
@@ -26,23 +30,13 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             oldCards.push(card.is);
           }else{//If it is a new card create it.
 
-            var newCard = new Parse.Object("Card");
-            Object.keys(card).forEach(function(key){return newCard.set(key, card[key])});
-            newCard.set("owner", user.get('username'));
-            newCard.set("cid", card.cid);
-            console.log("made it here 1");
-            newCard.set("did", deck.get("did"));
-            console.log("made it here 2", card.cid, deck.get('gid'));
-            newCard.set("gid", CardUtil.NewCardId(deck.get('gid'), card.cid))
+            var newCard = CardUtil.NewCard(user.get('username'), deck.get('did'), card);
             newCards.push(newCard);
-
-            console.log('here 2.5', newCard.toJSON());
           }
         });
         //console.log('here 2.6', newCards);
         Parse.Object.saveAll(newCards, {
           success: function(objs){
-            console.log('here 2.7')
             var cids = objs.map(function(c){
               return c.get("gid");
             }).concat(oldCards.map(function(id){
@@ -51,22 +45,19 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             cids.forEach(function(id){
               deck.addUnique("cids",id);
             });
-            console.log('here 3')
             res.success();
 
           },error: function(error){
-            console.log('here 4')
             res.error({error:"Invalid Deck"});
           },
           sessionToken: user.get('sessionToken'),
         });
-      console.log("here after 2");
+
     }else{
-      console.log('here 5')
       return res.success();
     }
   }else{
-    console.log('here 6')
+    console.log("Deck is Invalid")
     return res.error({error:"Invalid Deck"});
   }
 });
@@ -102,9 +93,20 @@ function ApplyTransactionToUser(t, user, errorCB, successCB){
     break;
 
     case 'aSUBSCRIPTION':
+      //delaySave = true;
     if(!user.get('subscriptions')){
-      user.set('subscriptions', []);
+      user.set('subscriptionObjects', []);
     }
+
+      var tSub = TUtil.NewTransaction({
+        query: 'aSUBSCRIBER',
+        data: { username: user.get('username') },
+        on: t.get('data').gid,
+        for: 'Deck',
+        owner: user.get('username'),
+        indexGroup: t.get('indexGroup'),
+        index: t.get('index'),
+      });
       user.addUnique('subscriptions', t.get('data').gid);
     break;
 
@@ -112,12 +114,23 @@ function ApplyTransactionToUser(t, user, errorCB, successCB){
     if(!user.get('subscriptions')){
       user.set('subscriptions', []);
     }
+    var tSub = TUtil.NewTransaction({
+      query: 'rSUBSCRIBER',
+      data: { username: user.get('username') },
+      on: t.get('data').gid,
+      for: 'Deck',
+      owner: user.get('username'),
+      indexGroup: t.get('indexGroup'),
+      index: t.get('index'),
+    });
+    tSub.save(null, { sessionToken: user.get('sessionToken') });
+
     user.remove('subscriptions', t.get('data').gid);
 
     break;
 
   }
-  //console.log('here 5')
+  console.log('saving user')
   if(!delaySave){
 
     user.save(null,{
@@ -188,6 +201,26 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 
             case "ADD":
             deck.set("newCards", [t.get("data")]);
+            break;
+
+            case "aSUBSCRIBER":
+            console.log("here 1")
+              if(!deck.get('subscribers')){
+                console.log("here 2")
+
+                deck.set('subscribers', []);
+              }
+              console.log("here 3")
+
+              deck.addUnique('subscribers', t.get('data').username);
+            break;
+
+            case "rSUBSCRIBER":
+              if(!deck.get('subscribers')){
+                deck.set('subscribers', []);
+              }
+              deck.remove('subscribers', t.get('data').username);
+
             break;
 
             case "DELETE":
