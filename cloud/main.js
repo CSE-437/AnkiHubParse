@@ -47,9 +47,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
             });
             res.success();
 
-          },error: function(error){
+          },error: function(cards, err){
             console.log("Invalid Deck, Bad Cards")
-            res.error({error:"Invalid Deck, Bad Cards"});
+            res.error({ error: err, cards: cards, message:"Invalid Deck, Bad Cards"});
           }, sessionToken: user.get('sessionToken')
 //          sessionToken: user.get('sessionToken'),
         });
@@ -66,7 +66,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 //Set cardid
 Parse.Cloud.beforeSave("Card", function(req, res){
   //First validate Deck
-  req.success();
+  res.success();
   // var card = req.object
   // if (!card.get('owner') && req.user){
   //   card.set('owner', req.user.get('username'));
@@ -287,7 +287,7 @@ function ApplyTransactionToDeck(t, user, errorCB, successCB, res){
 }
 
 Parse.Cloud.beforeSave("Transaction", function(req, res){
-  //First validate Deck
+  //First validate Transaction
   //console.log('here1');
   var didParse = TUtil.ParseTransaction(req.object)
   if (didParse.error){
@@ -298,6 +298,10 @@ Parse.Cloud.beforeSave("Transaction", function(req, res){
   //Ensure req.object is the same
   req.object = t;
   var user = req.user;
+  console.log("user = ", user);
+  if (!t.get("owner")){
+    t.set("owner", user.get('username'))
+  }
   //console.log('here 1.5', user);
   if(!user){
     return res.error({error:"Need to be logged in to post transaction"});
