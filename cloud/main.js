@@ -49,7 +49,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 
           },error: function(error){
             res.error({error:"Invalid Deck, Bad Cards"});
-          }
+          }, sessionToken: user.get('sessionToken')
 //          sessionToken: user.get('sessionToken'),
         });
 
@@ -66,6 +66,9 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
 Parse.Cloud.beforeSave("Card", function(req, res){
   //First validate Deck
   var card = req.object
+  if (!card.get('owner') && req.user){
+    card.set('owner', req.user.get('username'));
+  }
   if(CardUtil.ValidateCard(card)){
     res.success()
   }else{
