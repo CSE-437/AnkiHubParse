@@ -63,20 +63,7 @@ Parse.Cloud.beforeSave("Deck", function(req, res){
   }
 });
 
-//Set cardid
-Parse.Cloud.beforeSave("Card", function(req, res){
-  //First validate Deck
-  res.success();
-  // var card = req.object
-  // if (!card.get('owner') && req.user){
-  //   card.set('owner', req.user.get('username'));
-  // }
-  // if(CardUtil.ValidateCard(card)){
-  //   res.success()
-  // }else{
-  //   res.error({error: "Invalid Card"});
-  // }
-});
+
 
 function ApplyTransactionToUser(t, user, errorCB, successCB){
   var delaySave = false;
