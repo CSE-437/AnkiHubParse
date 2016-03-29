@@ -289,11 +289,8 @@ Parse.Cloud.beforeSave("Transaction", function(req, res){
   if (!t.get("owner")){
     t.set("owner", user.get('username'))
   }
-  //console.log('here 1.5', user);
   if(!user){
     return res.error({error:"Need to be logged in to post transaction"});
-  }else{
-    //console.log('here b', user);
   }
   switch(t.get("for")){
     case "User":
