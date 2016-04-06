@@ -300,6 +300,9 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
 }
 
 Parse.Cloud.beforeSave('Transaction', function(req, res){
+  if (req.object.get('done')){
+    return res.success();
+  }
   var didParse = TUtil.ParseTransaction(req.object)
   if (didParse.error){
     return res.error(didParse.error)
@@ -316,6 +319,7 @@ Parse.Cloud.beforeSave('Transaction', function(req, res){
   if(!user){
     return res.error({error:'Need to be logged in to post transaction'});
   }
+  t.set('done', true);
   switch(t.get('for')){
     case 'User':
 
