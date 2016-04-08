@@ -8,9 +8,9 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
   // First validate Deck
   var deck = req.object
   var user = req.user
-   if(!user){
-     return res.error({error: 'Invalid Deck. Did you send a user?', user:user});
-   }
+  if(!user){
+    return res.error({error: 'Invalid Deck. Did you send a user?', user:user});
+  }
   if(DeckUtil.ValidateDeck(deck)){// Save called by Cloud Code
     console.log('Validated Deck Before Synching');
     var cards = req.object.get('newCards');
@@ -23,44 +23,44 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
     deck.unset('newCards');
     if(cards && cards.length > 0){
       var oldCards = [];
-        var newCards = [];
-        cards.forEach(function(card, index, arr){
-          if(card.is){
-            oldCards.push(card.is);
-          }else{// If it is a new card create it.
+      var newCards = [];
+      cards.forEach(function(card, index, arr){
+        if(card.is){
+          oldCards.push(card.is);
+        }else{// If it is a new card create it.
 
-            var newCard = CardUtil.NewCard(user.get('username'), deck.get('did'), card);
-            newCards.push(newCard);
+          var newCard = CardUtil.NewCard(user.get('username'), deck.get('did'), card);
+          newCards.push(newCard);
+        }
+      });
+
+      Parse.Object.saveAll(newCards, {
+        success: function(objs){
+          console.log("here 3");
+          var cids = objs.map(function(c){
+            return c.get('gid');
+          }).concat(oldCards.map(function(id){
+            return id;
+          }));
+          if (!deck.get('cids')){
+            deck.set('cids', []);
           }
-        });
+          cids.forEach(function (id){
+            deck.addUnique('cids', id);
+          });
 
-        Parse.Object.saveAll(newCards, {
-          success: function(objs){
-            console.log("here 3");
-            var cids = objs.map(function(c){
-              return c.get('gid');
-            }).concat(oldCards.map(function(id){
-              return id;
-            }));
-            if (!deck.get('cids')){
-              deck.set('cids', []);
-            }
-            cids.forEach(function (id){
-              deck.addUnique('cids', id);
-            });
+          if (!deck.get('cards')){
+            deck.set('cards', []);
+          }
+          objs.forEach(function (c){ deck.addUnique('cards', c);});
+          res.success();
 
-            if (!deck.get('cards')){
-              deck.set('cards', []);
-            }
-            objs.forEach(function (c){ deck.addUnique('cards', c);});
-            res.success();
-
-          },error: function(cards, err){
-            console.log('Invalid Deck, Bad Cards')
-            res.error({ error: err, cards: cards, message:'Invalid Deck, Bad Cards'});
-          }, sessionToken: user.get('sessionToken')
-//          sessionToken: user.get('sessionToken'),
-        });
+        },error: function(cards, err){
+          console.log('Invalid Deck, Bad Cards')
+          res.error({ error: err, cards: cards, message:'Invalid Deck, Bad Cards'});
+        }, sessionToken: user.get('sessionToken')
+        //          sessionToken: user.get('sessionToken'),
+      });
 
     }else{
       return res.success();
@@ -78,48 +78,48 @@ function ApplyTransactionToUser(t, user, errorCB, successCB){
   switch(t.get('query')){
     case 'aDECK':
 
-      if(!user.get('decks')){
-        user.set('decks', []);
-      }
-      user.addUnique('decks', t.get('data').gid);
+    if(!user.get('decks')){
+      user.set('decks', []);
+    }
+    user.addUnique('decks', t.get('data').gid);
 
     break;
 
     case 'rDECK':
-      if(!user.get('decks')){
-        user.set('decks', []);
-      }
-      user.remove('decks', t.get('data').gid);
+    if(!user.get('decks')){
+      user.set('decks', []);
+    }
+    user.remove('decks', t.get('data').gid);
     break;
 
     case 'aSUBSCRIPTION':
-      //delaySave = true;
+    //delaySave = true;
     if(!user.get('subscriptions')){
       user.set('subscriptions', []);
     }
 
-      var tSub = TUtil.NewTransaction({
-        query: 'aSUBSCRIBER',
-        data: { username: user.get('username') },
-        on: t.get('data').gid,
-        for: 'Deck',
-        owner: user.get('username'),
-        indexGroup: t.get('indexGroup'),
-        index: t.get('index'),
-      });
-      delaySave = true
-      tSub.save(null,{
-        success: function(){
-          user.addUnique('subscriptions', t.get('data').gid);
-          user.save(null,{
-            success: successCB,
-            error: errorCB,
-            sessionToken: user.get('sessionToken')
-          })
-        },
-        error: errorCB,
-        sessionToken: user.get('sessionToken')
-      });
+    var tSub = TUtil.NewTransaction({
+      query: 'aSUBSCRIBER',
+      data: { username: user.get('username') },
+      on: t.get('data').gid,
+      for: 'Deck',
+      owner: user.get('username'),
+      indexGroup: t.get('indexGroup'),
+      index: t.get('index'),
+    });
+    delaySave = true
+    tSub.save(null,{
+      success: function(){
+        user.addUnique('subscriptions', t.get('data').gid);
+        user.save(null,{
+          success: successCB,
+          error: errorCB,
+          sessionToken: user.get('sessionToken')
+        })
+      },
+      error: errorCB,
+      sessionToken: user.get('sessionToken')
+    });
     break;
 
     case 'rSUBSCRIPTION':
@@ -225,19 +225,19 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
             break;
 
             case 'aSUBSCRIBER':
-              if(!deck.get('subscribers')){
+            if(!deck.get('subscribers')){
 
-                deck.set('subscribers', []);
-              }
+              deck.set('subscribers', []);
+            }
 
-              deck.addUnique('subscribers', t.get('data').username);
+            deck.addUnique('subscribers', t.get('data').username);
             break;
 
             case 'rSUBSCRIBER':
-              if(!deck.get('subscribers')){
-                deck.set('subscribers', []);
-              }
-              deck.remove('subscribers', t.get('data').username);
+            if(!deck.get('subscribers')){
+              deck.set('subscribers', []);
+            }
+            deck.remove('subscribers', t.get('data').username);
 
             break;
 
@@ -252,9 +252,9 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
             break;
 
             case 'aKEYWORDS':
-              t.get('data').keywords.forEach(function(word){
-                deck.addUnique('keywords', word)
-              });
+            t.get('data').keywords.forEach(function(word){
+              deck.addUnique('keywords', word)
+            });
             break;
 
             case 'rKEYWORDS':
@@ -290,13 +290,52 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
             sessionToken: user.get('sessionToken')
           })
         }else{
-            errorCB({error: 'Failed to Find Deck with given deckid', transaction: t})
+          errorCB({error: 'Failed to Find Deck with given deckid', transaction: t})
         }
       },
       error: function(user, err){errorCB(err)}
     });
   }
 
+}
+
+function ApplyTransactionToCard (t, user, errorCB, successCB, res){
+  // GET The Deck.
+  if(!(TUtil.UserHasAccess(t, user))){
+    return errorCB({error: 'User does not have access'}, t);
+  }
+  var query = new Parse.Query('Card');
+  query.equalTo('gid', t.get('on'));
+  query.include('CardType');
+  query.include('CardType.FrontSide');
+  query.include('CardType.BackSide');
+  query.include('style');
+  query.first({
+    success: function (card){
+      var deck = card;
+      if(card){
+        switch(t.get('query')){
+          case 'cFRONT':
+          card.get('CardType').get('FrontSide').set('template', t.get('data').front);
+          break;
+
+          case 'cBACK':
+          card.get('CardType').get('BackSide').set('template', t.get('data').back);
+          break;
+
+        }
+        card.save(null, {
+          success: successCB,
+          error:errorCB,
+          sessionToken:user.get('sessionToken')
+        });
+      }else{
+        errorCB({error: "No card with that gid"});
+      }
+    },
+    error: errorCB,
+    sessionToken: user.get('sessionToken'),
+  });
 }
 
 Parse.Cloud.beforeSave('Transaction', function(req, res){
@@ -323,14 +362,18 @@ Parse.Cloud.beforeSave('Transaction', function(req, res){
   switch(t.get('for')){
     case 'User':
 
-      console.log('here2')
-      ApplyTransactionToUser(t, user, res.error, res.success);
+    console.log('here2')
+    ApplyTransactionToUser(t, user, res.error, res.success);
     break;
     case 'Deck':
-      ApplyTransactionToDeck(t, user, res.error, res.success, res)
+    ApplyTransactionToDeck(t, user, res.error, res.success, res)
+    break;
+
+    case 'Card':
+    ApplyTransactionToCard(t, user, res.error, res.success);
     break;
     default:
-      res.error({error:'Invalid Transaction check for field \'for\'', transaction: t});
+    res.error({error:'Invalid Transaction check for field \'for\'', transaction: t});
   }
 
 });

@@ -38,6 +38,8 @@ var CARD_QUERIES = [
   "aTAGS",
   "rTAGS",
   "cTAGS",
+  "cFRONT",
+  "cBACK",
   "GETACTIONS",
   "aCOLLABORATOR",
   "rCOLLABORATOR"
