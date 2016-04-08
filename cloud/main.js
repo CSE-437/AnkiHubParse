@@ -55,6 +55,12 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
           objs.forEach(function (c){ deck.addUnique('cards', c);});
           res.success();
 
+          if (!user.get('decksPtr')){
+            user.set('decksPtr', []);
+          }
+
+          user.addUnique('decksPtr', deck);
+
         },error: function(cards, err){
           console.log('Invalid Deck, Bad Cards')
           res.error({ error: err, cards: cards, message:'Invalid Deck, Bad Cards'});
