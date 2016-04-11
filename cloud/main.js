@@ -333,13 +333,13 @@ function ApplyTransactionToCard (t, user, errorCB, successCB, res){
           break;
 
           case 'aKEYWORDS':
-          if !card.get('keywords'){
+          if (!card.get('keywords')){
             card.set('keywords', []);
           }
           card.addUnique('keywords', t.get('data').keyword);
           break;
           case 'rKEYWORDS':
-          if card.get('keywords'){
+          if (card.get('keywords')){
             card.remove('keywords', t.get('data').keywords);
           }
           break;
