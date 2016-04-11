@@ -28,7 +28,7 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
         if(card.is){
           oldCards.push(card.is);
         }else{// If it is a new card create it.
-
+          console.log("Making Card", index);
           var newCard = CardUtil.NewCard(user.get('username'), deck.get('did'), card);
           newCards.push(newCard);
         }
