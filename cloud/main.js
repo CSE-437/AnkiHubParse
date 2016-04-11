@@ -20,14 +20,14 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
     if (!deck.get('gid')){
       deck.set('gid', [user.get('username'), deck.get('did')].join(':'));
     }
-    if (deck.get('newCards').length > 100){
+    if (deck.get('newCards') && deck.get('newCards').length > 100){
       return res.error({error: 'Cannot Send Decks with more than 100 cards'});
     }
     deck.unset('newCards');
     if(cards && cards.length > 0){
       var oldCards = [];
       var newCards = [];
-      cards.forEach(function(card, index, arr){
+      cards.forEach(function (card, index, arr){
         if(card.is){
           oldCards.push(card.is);
         }else{// If it is a new card create it.
