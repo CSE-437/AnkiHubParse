@@ -20,6 +20,9 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
     if (!deck.get('gid')){
       deck.set('gid', [user.get('username'), deck.get('did')].join(':'));
     }
+    if (deck.get('newCards').length > 100){
+      return res.error({error: 'Cannot Send Decks with more than 100 cards'});
+    }
     deck.unset('newCards');
     if(cards && cards.length > 0){
       var oldCards = [];
@@ -328,6 +331,51 @@ function ApplyTransactionToCard (t, user, errorCB, successCB, res){
           case 'cBACK':
           card.get('CardType').get('BackSide').set('template', t.get('data').back);
           break;
+
+          case 'aKEYWORDS':
+          if !card.get('keywords'){
+            card.set('keywords', []);
+          }
+          card.addUnique('keywords', t.get('data').keyword);
+          break;
+          case 'rKEYWORDS':
+          if card.get('keywords'){
+            card.remove('keywords', t.get('data').keywords);
+          }
+          break;
+
+          case 'aNOTES':
+          card.addUnique('notes', t.get('data').note);
+          break;
+
+          case 'rNOTES':
+          card.remove('notes', t.get('data').note);
+          break;
+
+          case 'aTAGS':
+          if (!card.get('tags')){
+            card.set('tags', []);
+          }
+          card.addUnique('tags', t.get('data').tag);
+          break;
+
+          case 'rTAGS':
+          if (card.get('tags')){
+            card.remove('tags', t.get('data').tag);
+          }
+          break;
+
+          case 'aCOLLABORATOR':
+          if (!card.get('collaborators')){
+            card.set('collaborators', []);
+          }
+          card.addUnique('collaborators', t.get('data').username);
+          break;
+
+          case 'rCOLLABORATOR':
+          if (card.get('collaborators')){
+            card.remove('collaborators', t.get('data').username);
+          }
 
         }
         card.save(null, {

@@ -54,8 +54,8 @@ module.exports.NewCard = function (username, did, card){
   }
   newCard.set('style', style);
 
-  newCard.set('tags', card.tags);
-  newCard.set('keywords', card.keywords);
+  newCard.set('tags', card.tags || []);
+  newCard.set('keywords', card.keywords || []);
 
   newCard.set('owner', username);
   newCard.set('cid', card.cid);

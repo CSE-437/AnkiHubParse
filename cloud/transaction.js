@@ -45,7 +45,7 @@ var CARD_QUERIES = [
   "rCOLLABORATOR"
 ];
 
-function ValidateQuery(queryString, obj){
+function ValidateQuery (queryString, obj){
   switch (obj.get("for")) {
     case "User":
       return USER_QUERIES.includes(queryString);
