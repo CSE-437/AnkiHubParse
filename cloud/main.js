@@ -209,13 +209,14 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
     if(!(TUtil.UserHasAccess(t, user))){
       return errorCB({error: 'User does not have access'}, t);
     }
-    var query = new Parse.Query('Deck')
-    query.equalTo('gid', t.get('on'))
+    var query = new Parse.Query('Deck');
+    query.equalTo('gid', t.get('on'));
+    console.log("here Deck Transaction")
     query.find({
       success: function(results){
         var deck = results[0];
+        console.log('found deck', deck);
         if(deck){
-
           switch(t.get('query')){
             case 'REDESC':
             deck.set('description', t.get('data').description);
@@ -225,12 +226,13 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
             deck.set('name', t.get('data').name);
             break;
 
+            //
             case 'REMOVE':
             deck.remove('cids', t.get('data').gid);
             break;
 
             case 'ADD':
-            deck.set('newCards', [t.get('data')]);
+            deck.set('newCards', t.get('data'));
             break;
 
             case 'aSUBSCRIBER':
@@ -302,7 +304,7 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
           errorCB({error: 'Failed to Find Deck with given deckid', transaction: t})
         }
       },
-      error: function(user, err){errorCB(err)}
+      error: function(user, err){console.log('arguments');errorCB(err)}
     });
   }
 
@@ -313,6 +315,7 @@ function ApplyTransactionToCard (t, user, errorCB, successCB, res){
   if(!(TUtil.UserHasAccess(t, user))){
     return errorCB({error: 'User does not have access'}, t);
   }
+  console.log("here");
   var query = new Parse.Query('Card');
   query.equalTo('gid', t.get('on'));
   query.include('CardType');
@@ -420,6 +423,7 @@ Parse.Cloud.beforeSave('Transaction', function(req, res){
     ApplyTransactionToUser(t, user, res.error, res.success);
     break;
     case 'Deck':
+    console.log('here Deck');
     ApplyTransactionToDeck(t, user, res.error, res.success, res)
     break;
 
