@@ -25,6 +25,7 @@ Parse.Cloud.beforeSave('Deck', function(req, res){
     }
     deck.unset('newCards');
     if(cards && cards.length > 0){
+      console.log("Must add new cards")
       var oldCards = [];
       var newCards = [];
       cards.forEach(function (card, index, arr){
@@ -215,8 +216,8 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
     query.find({
       success: function(results){
         var deck = results[0];
-        console.log('found deck', deck);
         if(deck){
+          console.log('found deck', t.get('query'));
           switch(t.get('query')){
             case 'REDESC':
             deck.set('description', t.get('data').description);
@@ -232,7 +233,8 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
             break;
 
             case 'ADD':
-            deck.set('newCards', t.get('data'));
+            console.log("adding Card")
+            deck.set('newCards', t.get('data').newCards);
             break;
 
             case 'aSUBSCRIBER':
@@ -295,6 +297,7 @@ function ApplyTransactionToDeck (t, user, errorCB, successCB, res){
 
           deck.save(null, {
             success:function(deck){
+              console.log("Transaction Success Saving")
               successCB()
             },
             error:function(user, err){errorCB(err)},
@@ -396,11 +399,13 @@ function ApplyTransactionToCard (t, user, errorCB, successCB, res){
 }
 
 Parse.Cloud.beforeSave('Transaction', function(req, res){
+  console.log("Entering Transaction");
   if (req.object.get('done')){
     return res.success();
   }
   var didParse = TUtil.ParseTransaction(req.object)
   if (didParse.error){
+    console.log("Transaction Parsing Error");
     return res.error(didParse.error)
   }
   //console.log('here1')
